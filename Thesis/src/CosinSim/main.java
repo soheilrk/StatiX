@@ -1,33 +1,75 @@
 package CosinSim;
+
+import java.awt.HeadlessException;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.text.ParseException;
 import java.util.*;
 import java.util.Map.Entry;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+
 import CosinSim.NativeUtils;
+//import info.exascale.daoc.daoc;
 import info.exascale.daoc.*;
 
 
 public class main {
+//	static {
+//	    try {
+//	    	System.load("C:\\Users\\rosha\\git\\ClustringCosinSimilarityGraph\\Thesis\\ib\\info\\exascale\\daoc");
+//	    } catch (UnsatisfiedLinkError e) {
+//	      System.err.println("Native code library failed to load.\n" + e);
+//	      System.exit(1);
+//	    }
+//	  }
+
 	private static final String Static = null;
 	static TreeMap<String, Property> map = new TreeMap<String, Property>();
 	static TreeMap<String, InstancePropertiesIsTyped> instanceListPropertiesTreeMap = new TreeMap<String, InstancePropertiesIsTyped>();
 	static HashMap<String, Double> WeightsForEachProperty = new HashMap<String, Double>();
 	static List<String> listOfInstances = new ArrayList<String>();
 	static int noTotalOccurances = 0; 
-	static {
-	   // System.loadLibrary("info.exascale.daoc");
-	  }
+	
 	public static void main(String[] args) throws Exception {
+		CommandLineParser parser = new DefaultParser();
+		Options options = new Options();
+		options.addOption("g", true, "The ground-truth dataset");
 		
-		FileExits();
-//		NativeUtils.loadLibraryFromJar("/resources/daoc.jar");
-//		System.out.println("Library Loaded - Loaded from jar");
+		HelpFormatter formatter = new HelpFormatter();
+		String[] argsOpt = new String[]{"args"};
 		
+		
+		try{
+		CommandLine cmd = parser.parse( options, args);
+		 List<String> files = cmd.getArgList();
+		 if (files.size()<1) formatter.printHelp( "java app [OPTION] <InputDataPath>", options );
+		String gtDataset = null;
+			if(cmd.hasOption("g")) {
+				gtDataset = cmd.getOptionValue("g");
+				System.err.println("g file= "+gtDataset);
+				FileExits(args[0],gtDataset);
+			}
+			else {
+				System.err.println("input file= "+args[0]);
+				NoFileExists(args[0]);
+				
+			}
+		
+		}
+		catch (ParseException e){
+			e.printStackTrace();
+		}
+		Statix (args[0]+"_GraphResult.cnl");
+
 	  }
 	//"C:\Users\rosha\OneDrive\Documents\db\museum_redNoBAL"
 			//C:\Users\rosha\OneDrive\Documents\db\museum
@@ -38,8 +80,35 @@ public class main {
 		return readDataSet2(file2);
 	}
 	
+	
+	public static void NoFileExists(String N3DataSet) throws IOException {
+		readDataSet1(N3DataSet);
+		
+		HashMap<String, Double> weightPerProperty = new HashMap<String, Double>();
+		Iterator propIt = map.entrySet().iterator();
+		while(propIt.hasNext())
+		{
+			
+			Map.Entry<String, Property> entry = (Entry<String, Property>) propIt.next();
+
+			try
+			{
+					
+					weightPerProperty.put(entry.getKey(),(double)1);
+				
+				
+			}
+			catch (Exception exeption)
+			{
+				throw exeption;
+			}
+		}	
+		System.out.println("Property Weight for <http://www.w3.org/2002/07/owl#sameAs> = " + weightPerProperty.get("<http://www.w3.org/2002/07/owl#sameAs>"));
+	}
+	
 	//function to read the first dataset
-public static void readDataSet1(String N3DataSet) throws IOException {
+
+	public static void readDataSet1(String N3DataSet) throws IOException {
 	
     FileReader fileReader = new FileReader(N3DataSet);
     BufferedReader bufferedReader = new BufferedReader(fileReader);
@@ -487,55 +556,53 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
 	      
 
 	
-	public static void Graph() throws Exception
-	{
-     int n = instanceListPropertiesTreeMap.size();
-//     double matrix[][] = new double[n][n];
-     Graph gr= new Graph(n);
-		gr.addNodes(n);
-		InpLinks grInpLinks  = new InpLinks ();
-		
-		for (int i = 0; i < n; i++)
-          {
-              for (int j = i; j < n; j++)
-              {
-            	  
-            	  String instance1 = listOfInstances.get(i);
-            	  String instance2= listOfInstances.get(j);
-	             double  matrix = similarity(instance1, instance2);
-	             	               
-	               grInpLinks.add(new InpLink(instanceListPropertiesTreeMap.get(instance2).id,matrix));
-	               grInpLinks.add(instanceListPropertiesTreeMap.get(instance1).id,grInpLinks);
-
-              }
-              gr.addNodeEdges(instanceListPropertiesTreeMap.get(instance1).id,grInpLinks);
-              
-              
-              grInpLinks.clear();
-  			
-          }
-		//clustring and output
-		final boolean edges = !gr.directed();
-
-		SWIGTYPE_p_shared_ptrT_daoc__NodesT_daoc__LinksT_daoc__LinkT_daoc__LinkWeight_true_t_t_t_t nodes = gr.release();
-		SWIGTYPE_p_shared_ptrT_daoc__HierarchyT_std__vectorT_daoc__WeightedLinkT_float_t_t_t_t hier = daoc.cluster(nodes,edges);
-		
-		
-
-		
-		OutputOptions outpopts;
-		//outpopts.clsfmt = ClsOutFmt::ROOT;
-		outpopts.setClsfmt(ROO
-		//outpopts.clsrstep = 0.8;
-		outpopts.setClsrstep((float) 0.8);
-		//outpopts.clsfile = "rootlev.cnl"
-		outpopts.setClsfile("rootlev.cnl");
-		//outpopts.fltMembers = true;
-		outpopts.setFltMembers(true);
-		hier.output(outpopts);
-
-	
-	}
+		 public static void Statix (String outputPath) throws Exception
+			{
+		     System.err.println("Calling the lib function...");
+			 System.err.println("Default graph is directed: " + new Graph(2).directed());
+		     int n = instanceListPropertiesTreeMap.size();
+		     Graph gr= new Graph(n);
+				InpLinks grInpLinks  = new InpLinks ();
+				
+				for (int i = 0; i < n; i++)
+		          {            	  
+					String instance1 = listOfInstances.get(i);
+					long  sid = instanceListPropertiesTreeMap.get(instance1).id;  // Source node id
+		            //System.out.print(sid + "> ");
+		              for (int j = i; j < n; j++)
+		              {
+		            	  
+		            	  String instance2= listOfInstances.get(j);
+			              double  weight = similarity(instance1, instance2);
+			              long did = instanceListPropertiesTreeMap.get(instance2).id;
+			              //System.out.print(" " + did + ":" + weight);
+			             	           
+			               grInpLinks.add(new InpLink(did, (float)weight));
+		              }
+		              //System.out.println();
+		              gr.addNodeAndEdges(sid,grInpLinks);
+		              grInpLinks.clear();
+		  	     }
+		  	    grInpLinks = null;
+		        System.err.println("Graph links added");
+				//clustring and output
+				final boolean edges = !gr.directed();
+				OutputOptions outpopts = new OutputOptions();
+				final short outpflag = 0x41;  // ROOT | SIMPLE
+				outpopts.setClsfmt(outpflag);
+				//outpopts.clsrstep = 0.8;
+				outpopts.setClsrstep((float) 0.8);
+				//outpopts.clsfile = "rootlev.cnl"
+				outpopts.setClsfile(outputPath);
+				//outpopts.fltMembers = true;
+				outpopts.setFltMembers(true);
+				
+		        System.err.println("Calling hierarchy building");
+		        Hierarchy hr = gr.buildHierarchy();
+		        System.err.println("Outputting the hierarchy");
+		        hr.output(outpopts);
+		        System.err.println("Hierarchy output completed");
+			}
 	
 	//Output Similarity Matrix in a File
 //	public static void SymmetricMatrixProgram(String path) throws Exception
@@ -620,18 +687,23 @@ public static HashMap<String, Double> readDataSet2(String N3DataSet) throws IOEx
   
 		
 		//This function first check if it is out put results from before and will delete them before running the app and then read the directory for input dataset
-		public static void FileExits() throws Exception {
+		public static void FileExits(String dataPath,String dataPath2) throws Exception {
 		    
 			//Reading the N3 Dataset Path
-			    		 BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-			    	    System.out.print("Enter the PATH of your First Dataset: ");
-			    	        String dataPath = br.readLine();    	
-			    	readDataSet1(dataPath);
-			    	 BufferedReader br2 = new BufferedReader(new InputStreamReader(System.in));
-			    	    System.out.print("Enter the PATH of your Second Dataset: ");
-			    	        String dataPath2 = br2.readLine(); 
+			
+			
+			
+			
+			//BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+			    	   // System.out.print("Enter the PATH of your First Dataset: ");
+			    	//        String dataPath = br.readLine();    	
+			    	
+			    //	 BufferedReader br2 = new BufferedReader(new InputStreamReader(System.in));
+			    	   // System.out.print("Enter the PATH of your Second Dataset: ");
+			    	 //       String dataPath2 = br2.readLine(); 
+			    	        readDataSet1(dataPath);
 			    	        WeightsForEachProperty = readDataSet2(dataPath2);
-			    	   //   SymmetricMatrixProgram();
+			    	        
 			    	
 			    }
 		
